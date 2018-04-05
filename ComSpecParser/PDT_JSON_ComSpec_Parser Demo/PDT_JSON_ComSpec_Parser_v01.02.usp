@@ -1,0 +1,157 @@
+// Module Header Info
+/*
+Dealer Name: PepperDash Technology Corp.
+System Name:
+System Number:
+Programmer: Christian Tomain
+Comments:
+*/
+// Compiler Directives
+
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+
+#DEFINE_CONSTANT MAX_PORTS 10
+#DEFINE_CONSTANT MAX_STRING 1000
+
+#HELP_BEGIN
+
+Release Notes:
+ - v01.02 01/29/18 CPT: Added Pacing property
+ - v01.01 01/29/18 CPT: Added Port_Offset input
+ - v01.00 01/28/18 CPT: Initial Release
+
+This module accepts a JSON formatted ComSpec and parses the values into their respective analog signals for distribution to 
+	SIMPL based ComSpec modules used for formatting strings to the Packet Transmission device extender
+
+
+String Inputs:
+ComSpecIn - accepts a JSON formatted ComSpec:
+	e.g.:
+		{
+			"Port": 101,
+			"Baud": 9600,
+			"Parity" : 78,
+			"DataBits": 8,
+			"StopBit": 1,
+			"SoftHS": 0,
+			"HardHS": 0,
+			"Protocol": 0
+		}
+	- The Port determines which index on the outputs' array to which the values will be propagated, offset by the ComSpecParse.PortOffset property value.
+		i.e. Port - PortOffset = Output Arrays' Index
+		e.g. if PortOffset is set to 100, Port 101 values will go to outputs' array index 1, Port 102 to index 2, etc..
+	- The values of each property will propagate to the corresponding analog output for that property. 
+	- If a property is not included in the JSON object, a value of 0d will be output.
+
+Port_Offset - set value to desired offset value.
+
+Analog Outputs:
+Array of port ComSpec properties (Baud, Parity, etc)
+
+
+#HELP_END
+
+
+// Define S# Library Files
+                           		
+#USER_SIMPLSHARP_LIBRARY "ComSpecParser"		// This is the filename of your .clz file created by Visual Studio when you compile your S# library,
+													// not including the .clz extension.  In this example, by .clz would be LibraryFileName.clz and would
+													// be located in my user S+ directory or the local project directory where this S+ file is located
+
+// Define Inputs and Outputs
+
+STRING_INPUT
+ComSpecIn[MAX_STRING];
+
+ANALOG_INPUT
+Port_Offset;
+
+ANALOG_OUTPUT
+_SKIP_,
+Baud[MAX_PORTS],
+_SKIP_,
+Parity[MAX_PORTS],
+_SKIP_,
+DataBits[MAX_PORTS],
+_SKIP_,
+StopBit[MAX_PORTS],
+_SKIP_,
+SoftHS[MAX_PORTS],
+_SKIP_,
+HardHS[MAX_PORTS],
+_SKIP_,
+Protocol[MAX_PORTS],
+_SKIP_,
+Pacing[MAX_PORTS]
+;
+
+//Define S# Classes
+
+	ComSpecParse comSpecProcessor;
+
+// Events
+THREADSAFE CHANGE ComSpecIn
+{
+	comSpecProcessor.ProcessComSpec(ComSpecIn);
+}
+
+THREADSAFE CHANGE Port_Offset
+{
+	comSpecProcessor.PortOffset = Port_Offset;
+}
+
+eventHandler UShortChanged(ComSpecParse sender, UshrtChangeEventArgs args)	// This event handler is for all Ushort(analog) values returned from S#
+{
+	switch(args.Type)	// When S# throws an event, this code will execute.						
+	{
+		case (ComSpecParse.ChangeTypeBaud):
+		{
+        	Baud[args.Index] = args.IntValue;
+		}
+		case (ComSpecParse.ChangeTypeParity):
+		{
+        	Parity[args.Index] = args.IntValue;
+		}
+		case (ComSpecParse.ChangeTypeDataBits):
+		{
+        	DataBits[args.Index] = args.IntValue;
+		}
+		case (ComSpecParse.ChangeTypeStopBit):
+		{
+        	StopBit[args.Index] = args.IntValue;
+		}
+		case (ComSpecParse.ChangeTypeSoftHS):
+		{
+        	SoftHS[args.Index] = args.IntValue;
+		}
+		case (ComSpecParse.ChangeTypeHardHS):
+		{
+        	HardHS[args.Index] = args.IntValue;
+		}
+		case (ComSpecParse.ChangeTypeProtocol):
+		{
+        	Protocol[args.Index] = args.IntValue;
+		}
+		case (ComSpecParse.ChangeTypePacing):
+		{
+        	Pacing[args.Index] = args.IntValue;
+		}
+	}				
+
+}
+
+/*  NOTE:  The values for ClassName.ChangeTypeBool/Ushort/StringConstantName are defined in your S# library as "public const ushort" */
+
+Function Main()
+{
+     WaitForInitializationComplete();
+
+	// Register the event handlers when the program starts    
+	RegisterEvent(comSpecProcessor, UShortChange, UShortChanged); 
+    
+	// Set class property to match the local array size. Addresses an issue where a ComSpecIn with an out of bounds port would propagate it's values to outputs at array index[1] on a sharp change event
+	comSpecProcessor.maxPorts = MAX_PORTS;	
+
+}

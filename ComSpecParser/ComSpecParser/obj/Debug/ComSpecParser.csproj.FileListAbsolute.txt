@@ -1,0 +1,10 @@
+C:\_docs\SimplSharp\ComSpecParser\ComSpecParser\bin\Debug\ComSpecParser.dll
+C:\_docs\SimplSharp\ComSpecParser\ComSpecParser\bin\Debug\ComSpecParser.pdb
+C:\_docs\SimplSharp\ComSpecParser\ComSpecParser\bin\Debug\SimplSharpCustomAttributesInterface.dll
+C:\_docs\SimplSharp\ComSpecParser\ComSpecParser\bin\Debug\SimplSharpHelperInterface.dll
+C:\_docs\SimplSharp\ComSpecParser\ComSpecParser\bin\Debug\SimplSharpNewtonsoft.dll
+C:\_docs\SimplSharp\ComSpecParser\ComSpecParser\bin\Debug\SimplSharpSQLHelperInterface.dll
+C:\_docs\SimplSharp\ComSpecParser\ComSpecParser\bin\Debug\SimplSharpReflectionInterface.dll
+C:\_docs\SimplSharp\ComSpecParser\ComSpecParser\obj\Debug\ResolveAssemblyReference.cache
+C:\_docs\SimplSharp\ComSpecParser\ComSpecParser\obj\Debug\ComSpecParser.dll
+C:\_docs\SimplSharp\ComSpecParser\ComSpecParser\obj\Debug\ComSpecParser.pdb

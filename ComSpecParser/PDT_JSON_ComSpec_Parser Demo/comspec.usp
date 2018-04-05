@@ -1,0 +1,368 @@
+#symbol_name "Serial Comspec"
+
+ANALOG_INPUT Port;
+ANALOG_INPUT Baud_Rate;
+ANALOG_INPUT Parity;
+ANALOG_INPUT Data_Bits;
+ANALOG_INPUT Stop_Bits;
+ANALOG_INPUT SoftHandShake;
+ANALOG_INPUT HardHandShake;
+ANALOG_INPUT Protocol;
+ANALOG_INPUT Pacing;
+DIGITAL_INPUT ReportCTS;
+DIGITAL_INPUT SendComspec;
+STRING_OUTPUT Out$;
+
+#HELP_BEGIN
+
+* = default if given value is out of range.
+
+ANALOG_INPUT Port;
+*	'A'		Port A
+	'B'		Port B
+	'C'		Port C
+	'D'		Port D
+	'E'		Port E
+	'F'		Port F
+
+ Note - In "Analog Initialize" you can type in 'A' for Port A, etc.
+	
+ANALOG_INPUT Baud_Rate;
+	VALUE	MEANING  
+	-1d		MIDI
+	-2d		SMPTE
+	-3d		HMWORK
+	-4d		GRAFIK
+	300d		300
+	600d	600
+	1200d	1200
+	1800d	1800
+	2400d	2400
+	3600d	3600
+	4800d	4800
+	7200d	7200
+*	9600d	9600
+	14400d	14000
+	19200d	19200
+	28800d	28000
+	38400d	38400
+	57600d	57600
+	115d	115200		
+	
+ Note - In "Analog Initialize" you can type in -1d for a negative number.
+
+ANALOG_INPUT Parity;
+*	'N'		None
+	'E'		Even
+	'Z'		Zero Stick
+	'O'		Odd
+	
+ANALOG_INPUT Data_Bits;
+	7d		7
+*	8d		8
+	
+ANALOG_INPUT Stop_Bits;
+*	1d		1
+	2d		2
+
+ANALOG_INPUT SoftHandShake;
+*	0d		None
+	1d		XON/XOFF
+	2d		XONT
+	3d		XONR
+		
+ANALOG_INPUT HardHandShake;
+*	0d		None
+	1d		RTS
+	2d		CTS
+	3d		RTS/CTS
+
+ANALOG_INPUT Protocol;
+*	0d		RS-232
+	1d		RS-422
+	2d		RS-485
+
+DIGITAL_INPUT ReportCTS;
+	Digital signal - 
+		1		Reports a change on the CTS line to the COM symbol
+		0		Suppresses the change report.
+
+DIGITAL_INPUT SendComspec;
+	Digital signal - on rising edge, assembles the comspec and sends it on Out$
+
+STRING_OUTPUT Out$;
+	The comspec, this goes to a "Packet Helper" symbol for transmission.
+
+#HELP_END
+
+
+
+/*
+#define_constant BAUD_MIDI		-1
+#define_constant BAUD_SMPTE		-2
+#define_constant BAUD_HMWORK	-3
+#define_constant BAUD_GRAFIK	-4
+*/
+
+#define_constant PROTOCOL_RS232		0
+#define_constant PROTOCOL_RS422		1
+#define_constant PROTOCOL_RS485		2
+
+#define_constant SOFT_HSK_NONE		0
+#define_constant SOFT_HSK_XONXOFF	1
+#define_constant SOFT_HSK_XONT		2
+#define_constant SOFT_HSK_XONR		3
+
+#define_constant HARD_HSK_NONE		0
+#define_constant HARD_HSK_RTS		1
+#define_constant HARD_HSK_CTS		2
+#define_constant HARD_HSK_RTSCTS	3
+
+
+// 12 80 00 25 00 00 00
+function MakeSpec(byref string spec$, byval integer cspec)
+{
+	integer DefPort;
+	integer DefPace;
+	
+	DefPort = Port;
+	DefPace = Pacing;
+	
+	if(DefPort < 'A' || DefPort > 'F')
+	{
+		DefPort = 'A';
+		print("Invalid Port %c specified - assuming Port A.\n", Port);		
+	}
+	
+	if(DefPace > 31)
+	{
+		DefPace = 0;
+		print("Invalid Pacing %d specified - assuming No Pacing.\n", Pacing);		
+	}
+	
+	makestring(spec$, "%c%c%c%c%c%c%c", 0x12, 0x80|(DefPort-'A'), 0x00, LOW(cspec), HIGH(cspec), DefPace, 0x00);	
+}
+
+PUSH SendComspec
+{
+	integer cspec;
+	string spec$[7];
+	
+	cspec=0;
+	
+	switch(Baud_Rate)
+	{
+		case(-1):
+		{
+		   MakeSpec(spec$, 0xFFFE);
+		   Out$ = spec$;
+		   return;
+		}
+
+		case(-2):
+		{
+		   MakeSpec(spec$, 0xFFFD);
+		   Out$ = spec$;
+		   return;
+		}
+		
+		case(-3):
+		{
+		   MakeSpec(spec$, 0xFFFC);
+		   Out$ = spec$;
+		   return;
+		}
+
+		case(-4):
+		{
+		   MakeSpec(spec$, 0xFFFB);
+		   Out$ = spec$;
+		   return;
+		}
+
+		case (300):
+			cspec = cspec | 0x0000;
+
+		case (600):
+			cspec = cspec | 0x0001;
+		
+		case (1200):
+			cspec = cspec | 0x0002;
+
+		case (1800):
+			cspec = cspec | 0x0080;
+		
+		case (2400):
+			cspec = cspec | 0x0003;
+		
+		case (3600):
+			cspec = cspec | 0x0081;
+
+		case (4800):
+			cspec = cspec | 0x0004;
+
+		case (7200):
+			cspec = cspec | 0x0082;
+
+		case (9600):
+			cspec = cspec | 0x0005;
+		
+		case (14400):
+			cspec = cspec | 0x0083;
+
+		case (19200):
+			cspec = cspec | 0x0006;
+		
+		case (28800):	
+			cspec = cspec | 0x0084;
+		
+		case (38400):	
+			cspec = cspec | 0x0007;
+		
+		case (57600):
+			cspec = cspec | 0x0085;
+
+		case (115):	
+			cspec = cspec | 0x0086;
+		
+		default:
+		{
+			cspec = cspec | 0x0005;
+			print("Invalid baud rate %d received - assuming 9600 baud.\n", Baud_Rate);
+		}
+			
+	} // switch baud rate
+	
+	switch(Protocol)
+	{
+
+		case(PROTOCOL_RS232):
+			cspec = cspec | 0x0000;
+
+		case(PROTOCOL_RS422):
+			cspec = cspec | 0x0100;
+
+		case(PROTOCOL_RS485):
+			cspec = cspec | 0x2100;
+
+		default:
+		{
+			cspec = cspec | 0x0000;
+			print("Invalid Protocol %d received - assuming RS-232\n", Protocol);
+		}
+	} // switch protocol			
+	
+	
+	Cswitch(Parity)
+	{
+		case('e'):
+		case('E'):
+		{
+			cspec = cspec | 0x0008;
+			//break;
+		}
+		
+		case('z'):
+		case('Z'):
+		{
+			cspec = cspec | 0x0010;
+			//break;
+		}
+		
+		case('o'):
+		case('O'):
+		{
+			cspec = cspec | 0x0018;
+			//break;
+		}
+		case('n'):
+		case('N'):
+		{
+			cspec = cspec | 0x0000;
+			//break;
+		}
+		default:
+		{
+			cspec = cspec | 0x0000;
+			print("Invalid Parity %d (%c) received - assuming NONE\n", Parity, Parity);
+		}			
+	}
+	
+	switch(Data_Bits)
+	{
+		case(7):
+			cspec = cspec | 0x0000;
+
+		case(8):
+			cspec = cspec | 0x0020;
+
+		default:
+		{
+			cspec = cspec | 0x0020;
+			print("Invalid Data Bits %d received - assuming 8 Data Bits\n", Data_Bits);
+		}
+	}
+
+	switch(Stop_Bits)
+	{
+		case(1):
+			cspec = cspec | 0x0000;
+
+		case(2):
+			cspec = cspec | 0x0040;
+
+		default:
+		{
+			cspec = cspec | 0x0000;
+			print("Invalid Stop Bits %d received - assuming 1 Stop Bit\n", Stop_Bits);
+		}
+	}
+	
+	switch(SoftHandshake)
+	{
+		case(SOFT_HSK_NONE):
+			cspec = cspec | 0x0000;
+		
+		case(SOFT_HSK_XONXOFF):
+			cspec = cspec | 0x1800;
+			
+		case(SOFT_HSK_XONT):
+			cspec = cspec | 0x0800;
+			
+		case(SOFT_HSK_XONR):
+			cspec = cspec | 0x1000;
+			
+		default:
+		{
+			cspec = cspec | 0x8000;
+			print("Invalid Software Handshake %d received - assuming No Software Handshake\n", SoftHandshake);
+		}
+	}		
+
+	switch(HardHandshake)
+	{
+		case(HARD_HSK_NONE):
+			cspec = cspec | 0x0000;
+
+		case(HARD_HSK_RTS):
+			cspec = cspec | 0x0400;
+
+		case(HARD_HSK_CTS):
+			cspec = cspec | 0x0200;
+
+		case(HARD_HSK_RTSCTS):
+			cspec = cspec | (0x0400 | 0x0200);
+		
+		default:
+		{
+			cspec = cspec | 0x0000;
+			print("Invalid Hardware Handshake %d received - assuming No Hardware Handshake\n", HardHandshake);
+		}
+	}	
+	
+	if(ReportCTS = 1)
+		cspec = cspec | 0x4000;	
+
+	MakeSpec(spec$, cspec);
+	Out$ = spec$;
+}
